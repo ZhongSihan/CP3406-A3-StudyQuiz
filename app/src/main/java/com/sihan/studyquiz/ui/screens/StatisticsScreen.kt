@@ -11,17 +11,37 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.sihan.studyquiz.StudyQuizApplication
+import com.sihan.studyquiz.viewmodel.StatisticsViewModel
 
 @Composable
 fun StatisticsScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+
+    val application =
+        context.applicationContext as StudyQuizApplication
+
+    val statisticsViewModel: StatisticsViewModel = viewModel(
+        factory = StatisticsViewModel.Factory(
+            application.container.quizResultDao
+        )
+    )
+
+    val uiState by statisticsViewModel.uiState.collectAsState()
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -38,38 +58,84 @@ fun StatisticsScreen(
 
         StatisticCard(
             title = "Quiz Attempts",
-            value = "0"
+            value = uiState.totalAttempts.toString()
         )
 
         Spacer(modifier = Modifier.height(12.dp))
 
         StatisticCard(
             title = "Highest Score",
-            value = "0%"
+            value = "${uiState.highestScore}%"
         )
 
         Spacer(modifier = Modifier.height(12.dp))
 
         StatisticCard(
             title = "Average Score",
-            value = "0%"
+            value = "${uiState.averageScore}%"
         )
 
         Spacer(modifier = Modifier.height(12.dp))
 
         StatisticCard(
             title = "Latest Score",
-            value = "0%"
-        )
-
-        Spacer(modifier = Modifier.height(28.dp))
-
-        Text(
-            text = "Your quiz results will be stored locally on this device.",
-            style = MaterialTheme.typography.bodySmall
+            value = "${uiState.latestScore}%"
         )
 
         Spacer(modifier = Modifier.height(24.dp))
+
+        Text(
+            text = "Recent Results",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        if (uiState.recentResults.isEmpty()) {
+            Text(
+                text = "No quiz results yet.",
+                style = MaterialTheme.typography.bodyMedium
+            )
+        } else {
+            uiState.recentResults.forEachIndexed { index, result ->
+
+                Card(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "Attempt ${uiState.totalAttempts - index}"
+                        )
+
+                        Text(
+                            text = "${result.percentage}%",
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        OutlinedButton(
+            onClick = {
+                statisticsViewModel.clearStatistics()
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Clear Statistics")
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
 
         Button(
             onClick = onBack,
@@ -77,6 +143,13 @@ fun StatisticsScreen(
         ) {
             Text("Back to Home")
         }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Text(
+            text = "Your quiz results are stored locally on this device.",
+            style = MaterialTheme.typography.bodySmall
+        )
     }
 }
 

@@ -18,18 +18,30 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.sihan.studyquiz.StudyQuizApplication
 import com.sihan.studyquiz.viewmodel.QuizViewModel
 
 @Composable
 fun QuizScreen(
     onBack: () -> Unit,
-    modifier: Modifier = Modifier,
-    quizViewModel: QuizViewModel = viewModel()
+    modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+
+    val application =
+        context.applicationContext as StudyQuizApplication
+
+    val quizViewModel: QuizViewModel = viewModel(
+        factory = QuizViewModel.Factory(
+            application.container.quizResultDao
+        )
+    )
+
     val uiState by quizViewModel.uiState.collectAsState()
 
     if (uiState.isLoading) {
@@ -144,6 +156,7 @@ fun QuizScreen(
         Spacer(modifier = Modifier.height(20.dp))
 
         currentQuestion.answers.forEachIndexed { index, answer ->
+
             OutlinedButton(
                 onClick = {
                     quizViewModel.selectAnswer(index)
@@ -166,6 +179,7 @@ fun QuizScreen(
         }
 
         if (!uiState.answerSubmitted) {
+
             Button(
                 onClick = quizViewModel::submitAnswer,
                 enabled = uiState.selectedAnswerIndex != null,
@@ -173,7 +187,9 @@ fun QuizScreen(
             ) {
                 Text("Submit Answer")
             }
+
         } else {
+
             val isCorrect =
                 uiState.selectedAnswerIndex ==
                         currentQuestion.correctAnswerIndex

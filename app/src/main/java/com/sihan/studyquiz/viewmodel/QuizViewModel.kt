@@ -1,7 +1,10 @@
 package com.sihan.studyquiz.viewmodel
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.sihan.studyquiz.data.local.QuizResultDao
+import com.sihan.studyquiz.data.local.QuizResultEntity
 import com.sihan.studyquiz.data.repository.QuizRepository
 import com.sihan.studyquiz.model.QuizQuestion
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,7 +23,9 @@ data class QuizUiState(
     val errorMessage: String? = null
 )
 
-class QuizViewModel : ViewModel() {
+class QuizViewModel(
+    private val quizResultDao: QuizResultDao
+) : ViewModel() {
 
     private val repository = QuizRepository()
 
@@ -78,9 +83,7 @@ class QuizViewModel : ViewModel() {
     )
 
     private val _uiState = MutableStateFlow(
-        QuizUiState(
-            questions = fallbackQuestions
-        )
+        QuizUiState(questions = fallbackQuestions)
     )
 
     val uiState: StateFlow<QuizUiState> = _uiState.asStateFlow()
@@ -91,10 +94,7 @@ class QuizViewModel : ViewModel() {
 
     fun loadQuestions() {
         viewModelScope.launch {
-
-            _uiState.value = QuizUiState(
-                isLoading = true
-            )
+            _uiState.value = QuizUiState(isLoading = true)
 
             try {
                 val questions = repository.getQuestions(5)
@@ -106,9 +106,7 @@ class QuizViewModel : ViewModel() {
                         fallbackQuestions
                     }
                 )
-
             } catch (exception: Exception) {
-
                 _uiState.value = QuizUiState(
                     questions = fallbackQuestions,
                     errorMessage = "Online questions could not be loaded. Using offline questions."
@@ -128,10 +126,7 @@ class QuizViewModel : ViewModel() {
     fun submitAnswer() {
         val state = _uiState.value
         val selectedIndex = state.selectedAnswerIndex ?: return
-
-        if (state.questions.isEmpty()) {
-            return
-        }
+        if (state.questions.isEmpty()) return
 
         val currentQuestion =
             state.questions[state.currentQuestionIndex]
@@ -162,10 +157,45 @@ class QuizViewModel : ViewModel() {
             _uiState.value = state.copy(
                 quizFinished = true
             )
+
+            saveResult()
+        }
+    }
+
+    private fun saveResult() {
+        val state = _uiState.value
+
+        val percentage =
+            if (state.questions.isNotEmpty()) {
+                state.score * 100 / state.questions.size
+            } else {
+                0
+            }
+
+        viewModelScope.launch {
+            quizResultDao.insertResult(
+                QuizResultEntity(
+                    score = state.score,
+                    totalQuestions = state.questions.size,
+                    percentage = percentage
+                )
+            )
         }
     }
 
     fun restartQuiz() {
         loadQuestions()
+    }
+
+    class Factory(
+        private val quizResultDao: QuizResultDao
+    ) : ViewModelProvider.Factory {
+
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(
+            modelClass: Class<T>
+        ): T {
+            return QuizViewModel(quizResultDao) as T
+        }
     }
 }
