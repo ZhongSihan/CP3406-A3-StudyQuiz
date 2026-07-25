@@ -1,10 +1,13 @@
 package com.sihan.studyquiz.viewmodel
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.sihan.studyquiz.data.repository.QuizRepository
 import com.sihan.studyquiz.model.QuizQuestion
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 data class QuizUiState(
     val questions: List<QuizQuestion> = emptyList(),
@@ -12,12 +15,16 @@ data class QuizUiState(
     val selectedAnswerIndex: Int? = null,
     val score: Int = 0,
     val answerSubmitted: Boolean = false,
-    val quizFinished: Boolean = false
+    val quizFinished: Boolean = false,
+    val isLoading: Boolean = false,
+    val errorMessage: String? = null
 )
 
 class QuizViewModel : ViewModel() {
 
-    private val sampleQuestions = listOf(
+    private val repository = QuizRepository()
+
+    private val fallbackQuestions = listOf(
         QuizQuestion(
             question = "What does API stand for?",
             answers = listOf(
@@ -71,10 +78,44 @@ class QuizViewModel : ViewModel() {
     )
 
     private val _uiState = MutableStateFlow(
-        QuizUiState(questions = sampleQuestions)
+        QuizUiState(
+            questions = fallbackQuestions
+        )
     )
 
     val uiState: StateFlow<QuizUiState> = _uiState.asStateFlow()
+
+    init {
+        loadQuestions()
+    }
+
+    fun loadQuestions() {
+        viewModelScope.launch {
+
+            _uiState.value = QuizUiState(
+                isLoading = true
+            )
+
+            try {
+                val questions = repository.getQuestions(5)
+
+                _uiState.value = QuizUiState(
+                    questions = if (questions.isNotEmpty()) {
+                        questions
+                    } else {
+                        fallbackQuestions
+                    }
+                )
+
+            } catch (exception: Exception) {
+
+                _uiState.value = QuizUiState(
+                    questions = fallbackQuestions,
+                    errorMessage = "Online questions could not be loaded. Using offline questions."
+                )
+            }
+        }
+    }
 
     fun selectAnswer(index: Int) {
         if (!_uiState.value.answerSubmitted) {
@@ -87,6 +128,10 @@ class QuizViewModel : ViewModel() {
     fun submitAnswer() {
         val state = _uiState.value
         val selectedIndex = state.selectedAnswerIndex ?: return
+
+        if (state.questions.isEmpty()) {
+            return
+        }
 
         val currentQuestion =
             state.questions[state.currentQuestionIndex]
@@ -121,8 +166,6 @@ class QuizViewModel : ViewModel() {
     }
 
     fun restartQuiz() {
-        _uiState.value = QuizUiState(
-            questions = sampleQuestions
-        )
+        loadQuestions()
     }
 }

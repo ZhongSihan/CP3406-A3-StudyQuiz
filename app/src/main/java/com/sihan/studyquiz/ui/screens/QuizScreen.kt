@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -18,6 +19,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sihan.studyquiz.viewmodel.QuizViewModel
@@ -30,6 +32,24 @@ fun QuizScreen(
 ) {
     val uiState by quizViewModel.uiState.collectAsState()
 
+    if (uiState.isLoading) {
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            CircularProgressIndicator()
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text("Loading questions...")
+        }
+
+        return
+    }
+
     if (uiState.quizFinished) {
         QuizResultScreen(
             score = uiState.score,
@@ -38,6 +58,42 @@ fun QuizScreen(
             onBack = onBack,
             modifier = modifier
         )
+
+        return
+    }
+
+    if (uiState.questions.isEmpty()) {
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = "Questions could not be loaded.",
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Button(
+                onClick = quizViewModel::loadQuestions,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Try Again")
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            OutlinedButton(
+                onClick = onBack,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Back to Home")
+            }
+        }
+
         return
     }
 
@@ -63,6 +119,16 @@ fun QuizScreen(
             text = "Question ${uiState.currentQuestionIndex + 1} of ${uiState.questions.size}"
         )
 
+        if (uiState.errorMessage != null) {
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = uiState.errorMessage ?: "",
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.Center
+            )
+        }
+
         Spacer(modifier = Modifier.height(20.dp))
 
         Card(
@@ -78,7 +144,6 @@ fun QuizScreen(
         Spacer(modifier = Modifier.height(20.dp))
 
         currentQuestion.answers.forEachIndexed { index, answer ->
-
             OutlinedButton(
                 onClick = {
                     quizViewModel.selectAnswer(index)
@@ -101,19 +166,14 @@ fun QuizScreen(
         }
 
         if (!uiState.answerSubmitted) {
-
             Button(
-                onClick = {
-                    quizViewModel.submitAnswer()
-                },
+                onClick = quizViewModel::submitAnswer,
                 enabled = uiState.selectedAnswerIndex != null,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Submit Answer")
             }
-
         } else {
-
             val isCorrect =
                 uiState.selectedAnswerIndex ==
                         currentQuestion.correctAnswerIndex
@@ -142,9 +202,7 @@ fun QuizScreen(
             }
 
             Button(
-                onClick = {
-                    quizViewModel.nextQuestion()
-                },
+                onClick = quizViewModel::nextQuestion,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
