@@ -26,11 +26,11 @@ data class QuizUiState(
 
 class QuizViewModel(
     private val quizResultDao: QuizResultDao,
+    private val repository: QuizRepository,
     private val difficulty: String,
     private val questionCount: Int
 ) : ViewModel() {
 
-    private val repository = QuizRepository()
 
     private val fallbackQuestions = listOf(
         QuizQuestion(
@@ -230,6 +230,7 @@ class QuizViewModel(
 
     class Factory(
         private val quizResultDao: QuizResultDao,
+        private val repository: QuizRepository,
         private val difficulty: String,
         private val questionCount: Int
     ) : ViewModelProvider.Factory {
@@ -240,6 +241,7 @@ class QuizViewModel(
         ): T {
             return QuizViewModel(
                 quizResultDao = quizResultDao,
+                repository = repository,
                 difficulty = difficulty,
                 questionCount = questionCount
             ) as T

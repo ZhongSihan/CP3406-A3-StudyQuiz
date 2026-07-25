@@ -49,6 +49,7 @@ fun QuizScreen(
         key = "quiz_${difficulty}_$questionCount",
         factory = QuizViewModel.Factory(
             quizResultDao = application.container.quizResultDao,
+            repository = application.container.quizRepository,
             difficulty = difficulty,
             questionCount = questionCount
         )
