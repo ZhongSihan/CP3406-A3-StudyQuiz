@@ -1,26 +1,30 @@
 package com.sihan.studyquiz.ui.screens
 
+import android.media.AudioManager
+import android.media.ToneGenerator
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sihan.studyquiz.StudyQuizApplication
@@ -30,6 +34,7 @@ import com.sihan.studyquiz.viewmodel.QuizViewModel
 fun QuizScreen(
     difficulty: String,
     questionCount: Int,
+    soundEnabled: Boolean,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -49,59 +54,104 @@ fun QuizScreen(
 
     val uiState by quizViewModel.uiState.collectAsState()
 
-    if (uiState.isLoading) {
-        Column(
-            modifier = modifier
-                .fillMaxSize()
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+    val toneGenerator = remember {
+        ToneGenerator(
+            AudioManager.STREAM_NOTIFICATION,
+            70
+        )
+    }
+
+    LaunchedEffect(
+        uiState.answerSubmitted,
+        uiState.currentQuestionIndex
+    ) {
+        if (
+            soundEnabled &&
+            uiState.answerSubmitted &&
+            uiState.questions.isNotEmpty()
         ) {
-            CircularProgressIndicator()
+            val currentQuestion =
+                uiState.questions[
+                    uiState.currentQuestionIndex
+                ]
 
-            Spacer(modifier = Modifier.height(16.dp))
+            val isCorrect =
+                uiState.selectedAnswerIndex ==
+                        currentQuestion.correctAnswerIndex
 
-            Text("Loading questions...")
+            if (isCorrect) {
+                toneGenerator.startTone(
+                    ToneGenerator.TONE_PROP_ACK,
+                    150
+                )
+            } else {
+                toneGenerator.startTone(
+                    ToneGenerator.TONE_PROP_NACK,
+                    200
+                )
+            }
+        }
+    }
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        verticalArrangement = Arrangement.Center
+    ) {
+
+        if (uiState.isLoading) {
+
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                CircularProgressIndicator()
+
+                Spacer(
+                    modifier = Modifier.height(16.dp)
+                )
+
+                Text(
+                    text = "Loading questions..."
+                )
+            }
+
+            return@Column
         }
 
-        return
-    }
+        if (uiState.questions.isEmpty()) {
 
-    if (uiState.quizFinished) {
-        QuizResultScreen(
-            score = uiState.score,
-            totalQuestions = uiState.questions.size,
-            onRestart = quizViewModel::restartQuiz,
-            onBack = onBack,
-            modifier = modifier
-        )
-
-        return
-    }
-
-    if (uiState.questions.isEmpty()) {
-        Column(
-            modifier = modifier
-                .fillMaxSize()
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
             Text(
-                text = "Questions could not be loaded.",
-                textAlign = TextAlign.Center
+                text = "Quiz",
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.Bold
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(
+                modifier = Modifier.height(24.dp)
+            )
+
+            Text(
+                text = "Questions could not be loaded."
+            )
+
+            Spacer(
+                modifier = Modifier.height(16.dp)
+            )
 
             Button(
-                onClick = quizViewModel::loadQuestions,
+                onClick = {
+                    quizViewModel.loadQuestions()
+                },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Try Again")
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(
+                modifier = Modifier.height(12.dp)
+            )
 
             OutlinedButton(
                 onClick = onBack,
@@ -109,85 +159,172 @@ fun QuizScreen(
             ) {
                 Text("Back to Home")
             }
+
+            return@Column
         }
 
-        return
-    }
+        if (uiState.quizFinished) {
 
-    val currentQuestion =
-        uiState.questions[uiState.currentQuestionIndex]
+            val percentage =
+                uiState.score * 100 /
+                        uiState.questions.size
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
+            Text(
+                text = "Quiz Complete!",
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(
+                modifier = Modifier.height(24.dp)
+            )
+
+            Text(
+                text =
+                    "Score: ${uiState.score} / ${uiState.questions.size}",
+                style = MaterialTheme.typography.titleLarge
+            )
+
+            Spacer(
+                modifier = Modifier.height(12.dp)
+            )
+
+            Text(
+                text = "$percentage%",
+                style = MaterialTheme.typography.displaySmall,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(
+                modifier = Modifier.height(32.dp)
+            )
+
+            Button(
+                onClick = {
+                    quizViewModel.restartQuiz()
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Restart Quiz")
+            }
+
+            Spacer(
+                modifier = Modifier.height(12.dp)
+            )
+
+            OutlinedButton(
+                onClick = onBack,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Back to Home")
+            }
+
+            return@Column
+        }
+
+        val currentQuestion =
+            uiState.questions[
+                uiState.currentQuestionIndex
+            ]
+
         Text(
             text = "Quiz",
             style = MaterialTheme.typography.headlineLarge,
             fontWeight = FontWeight.Bold
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(
+            modifier = Modifier.height(12.dp)
+        )
 
         Text(
-            text = "Question ${uiState.currentQuestionIndex + 1} of ${uiState.questions.size}"
+            text =
+                "Difficulty: $difficulty",
+            style = MaterialTheme.typography.bodyMedium
+        )
+
+        Spacer(
+            modifier = Modifier.height(8.dp)
+        )
+
+        Text(
+            text =
+                "Question ${uiState.currentQuestionIndex + 1} of ${uiState.questions.size}",
+            style = MaterialTheme.typography.titleMedium
         )
 
         if (uiState.errorMessage != null) {
-            Spacer(modifier = Modifier.height(12.dp))
+
+            Spacer(
+                modifier = Modifier.height(12.dp)
+            )
 
             Text(
                 text = uiState.errorMessage ?: "",
-                style = MaterialTheme.typography.bodySmall,
-                textAlign = TextAlign.Center
+                style = MaterialTheme.typography.bodySmall
             )
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(
+            modifier = Modifier.height(24.dp)
+        )
 
-        Card(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(
-                text = currentQuestion.question,
-                modifier = Modifier.padding(20.dp),
-                style = MaterialTheme.typography.titleMedium
-            )
-        }
+        Text(
+            text = currentQuestion.question,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold
+        )
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(
+            modifier = Modifier.height(24.dp)
+        )
 
-        currentQuestion.answers.forEachIndexed { index, answer ->
+        currentQuestion.answers.forEachIndexed {
+                index,
+                answer ->
 
-            OutlinedButton(
-                onClick = {
-                    quizViewModel.selectAnswer(index)
-                },
-                modifier = Modifier.fillMaxWidth()
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment =
+                    Alignment.CenterVertically
             ) {
-                val selectedMark =
-                    if (uiState.selectedAnswerIndex == index) {
-                        "✓ "
-                    } else {
-                        ""
-                    }
+
+                RadioButton(
+                    selected =
+                        uiState.selectedAnswerIndex ==
+                                index,
+                    onClick = {
+                        quizViewModel.selectAnswer(
+                            index
+                        )
+                    },
+                    enabled =
+                        !uiState.answerSubmitted
+                )
 
                 Text(
-                    text = selectedMark + answer
+                    text = answer,
+                    modifier = Modifier.weight(1f)
                 )
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(
+                modifier = Modifier.height(8.dp)
+            )
         }
+
+        Spacer(
+            modifier = Modifier.height(20.dp)
+        )
 
         if (!uiState.answerSubmitted) {
 
             Button(
-                onClick = quizViewModel::submitAnswer,
-                enabled = uiState.selectedAnswerIndex != null,
+                onClick = {
+                    quizViewModel.submitAnswer()
+                },
+                enabled =
+                    uiState.selectedAnswerIndex != null,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Submit Answer")
@@ -195,114 +332,67 @@ fun QuizScreen(
 
         } else {
 
+            val selectedAnswer =
+                uiState.selectedAnswerIndex
+
             val isCorrect =
-                uiState.selectedAnswerIndex ==
+                selectedAnswer ==
                         currentQuestion.correctAnswerIndex
 
             Text(
-                text = if (isCorrect) {
-                    "Correct ✓"
-                } else {
-                    "Incorrect"
-                },
+                text =
+                    if (isCorrect) {
+                        "Correct!"
+                    } else {
+                        "Incorrect."
+                    },
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
-
             if (!isCorrect) {
+
+                Spacer(
+                    modifier = Modifier.height(8.dp)
+                )
+
                 Text(
-                    text = "Correct answer: " +
+                    text =
+                        "Correct answer: ${
                             currentQuestion.answers[
                                 currentQuestion.correctAnswerIndex
                             ]
+                        }"
                 )
-
-                Spacer(modifier = Modifier.height(12.dp))
             }
 
+            Spacer(
+                modifier = Modifier.height(20.dp)
+            )
+
             Button(
-                onClick = quizViewModel::nextQuestion,
+                onClick = {
+                    quizViewModel.nextQuestion()
+                },
                 modifier = Modifier.fillMaxWidth()
             ) {
+
                 Text(
                     if (
-                        uiState.currentQuestionIndex ==
+                        uiState.currentQuestionIndex <
                         uiState.questions.lastIndex
                     ) {
-                        "Finish Quiz"
-                    } else {
                         "Next Question"
+                    } else {
+                        "Finish Quiz"
                     }
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
-
-        OutlinedButton(
-            onClick = onBack,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Back to Home")
-        }
-    }
-}
-
-@Composable
-private fun QuizResultScreen(
-    score: Int,
-    totalQuestions: Int,
-    onRestart: () -> Unit,
-    onBack: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val percentage =
-        if (totalQuestions > 0) {
-            score * 100 / totalQuestions
-        } else {
-            0
-        }
-
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(
-            text = "Quiz Complete!",
-            style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.Bold
+        Spacer(
+            modifier = Modifier.height(16.dp)
         )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Text(
-            text = "Score: $score / $totalQuestions",
-            style = MaterialTheme.typography.headlineSmall
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = "$percentage%",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold
-        )
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        Button(
-            onClick = onRestart,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Restart Quiz")
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
 
         OutlinedButton(
             onClick = onBack,

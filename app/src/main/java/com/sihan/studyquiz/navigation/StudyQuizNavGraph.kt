@@ -1,8 +1,11 @@
 package com.sihan.studyquiz.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -30,50 +33,68 @@ fun StudyQuizNavGraph() {
     val settingsUiState by
     settingsViewModel.uiState.collectAsState()
 
-    NavHost(
-        navController = navController,
-        startDestination = Routes.LANDING
+    val currentDensity = LocalDensity.current
+
+    val fontScale =
+        if (settingsUiState.largeTextEnabled) {
+            1.25f
+        } else {
+            currentDensity.fontScale
+        }
+
+    CompositionLocalProvider(
+        LocalDensity provides Density(
+            density = currentDensity.density,
+            fontScale = fontScale
+        )
     ) {
 
-        composable(Routes.LANDING) {
-            LandingScreen(
-                onStartQuiz = {
-                    navController.navigate(Routes.QUIZ)
-                },
-                onOpenStatistics = {
-                    navController.navigate(Routes.STATISTICS)
-                },
-                onOpenSettings = {
-                    navController.navigate(Routes.SETTINGS)
-                }
-            )
-        }
+        NavHost(
+            navController = navController,
+            startDestination = Routes.LANDING
+        ) {
 
-        composable(Routes.QUIZ) {
-            QuizScreen(
-                difficulty = settingsUiState.difficulty,
-                questionCount = settingsUiState.questionCount,
-                onBack = {
-                    navController.popBackStack()
-                }
-            )
-        }
+            composable(Routes.LANDING) {
+                LandingScreen(
+                    onStartQuiz = {
+                        navController.navigate(Routes.QUIZ)
+                    },
+                    onOpenStatistics = {
+                        navController.navigate(Routes.STATISTICS)
+                    },
+                    onOpenSettings = {
+                        navController.navigate(Routes.SETTINGS)
+                    }
+                )
+            }
 
-        composable(Routes.SETTINGS) {
-            SettingsScreen(
-                settingsViewModel = settingsViewModel,
-                onBack = {
-                    navController.popBackStack()
-                }
-            )
-        }
+            composable(Routes.QUIZ) {
+                QuizScreen(
+                    difficulty = settingsUiState.difficulty,
+                    questionCount = settingsUiState.questionCount,
+                    soundEnabled = settingsUiState.soundEnabled,
+                    onBack = {
+                        navController.popBackStack()
+                    }
+                )
+            }
 
-        composable(Routes.STATISTICS) {
-            StatisticsScreen(
-                onBack = {
-                    navController.popBackStack()
-                }
-            )
+            composable(Routes.SETTINGS) {
+                SettingsScreen(
+                    settingsViewModel = settingsViewModel,
+                    onBack = {
+                        navController.popBackStack()
+                    }
+                )
+            }
+
+            composable(Routes.STATISTICS) {
+                StatisticsScreen(
+                    onBack = {
+                        navController.popBackStack()
+                    }
+                )
+            }
         }
     }
 }
