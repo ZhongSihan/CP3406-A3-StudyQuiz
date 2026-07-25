@@ -4,6 +4,7 @@ import com.sihan.studyquiz.data.remote.QuizApiService
 import com.sihan.studyquiz.model.QuizQuestion
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import android.text.Html
 
 class QuizRepository {
 
@@ -27,11 +28,27 @@ class QuizRepository {
 
             val allAnswers =
                 (dto.incorrect_answers + dto.correct_answer).shuffled()
+            val decodedQuestion = Html.fromHtml(
+                dto.question,
+                Html.FROM_HTML_MODE_LEGACY
+            ).toString()
+
+            val decodedAnswers = allAnswers.map {
+                Html.fromHtml(
+                    it,
+                    Html.FROM_HTML_MODE_LEGACY
+                ).toString()
+            }
+
+            val decodedCorrectAnswer = Html.fromHtml(
+                dto.correct_answer,
+                Html.FROM_HTML_MODE_LEGACY
+            ).toString()
 
             QuizQuestion(
-                question = dto.question,
-                answers = allAnswers,
-                correctAnswerIndex = allAnswers.indexOf(dto.correct_answer)
+                question = decodedQuestion,
+                answers = decodedAnswers,
+                correctAnswerIndex = decodedAnswers.indexOf(decodedCorrectAnswer)
             )
         }
     }

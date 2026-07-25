@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -96,8 +98,9 @@ fun QuizScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(24.dp),
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Top
     ) {
 
         if (uiState.isLoading) {
@@ -238,8 +241,7 @@ fun QuizScreen(
         )
 
         Text(
-            text =
-                "Difficulty: $difficulty",
+            text = "Difficulty: $difficulty",
             style = MaterialTheme.typography.bodyMedium
         )
 
@@ -279,24 +281,18 @@ fun QuizScreen(
             modifier = Modifier.height(24.dp)
         )
 
-        currentQuestion.answers.forEachIndexed {
-                index,
-                answer ->
+        currentQuestion.answers.forEachIndexed { index, answer ->
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment =
-                    Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically
             ) {
 
                 RadioButton(
                     selected =
-                        uiState.selectedAnswerIndex ==
-                                index,
+                        uiState.selectedAnswerIndex == index,
                     onClick = {
-                        quizViewModel.selectAnswer(
-                            index
-                        )
+                        quizViewModel.selectAnswer(index)
                     },
                     enabled =
                         !uiState.answerSubmitted
@@ -376,7 +372,6 @@ fun QuizScreen(
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
-
                 Text(
                     if (
                         uiState.currentQuestionIndex <
@@ -400,5 +395,9 @@ fun QuizScreen(
         ) {
             Text("Back to Home")
         }
+
+        Spacer(
+            modifier = Modifier.height(24.dp)
+        )
     }
 }
