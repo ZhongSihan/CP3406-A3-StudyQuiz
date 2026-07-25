@@ -13,16 +13,37 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.sihan.studyquiz.viewmodel.QuizViewModel
 
 @Composable
 fun QuizScreen(
     onBack: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    quizViewModel: QuizViewModel = viewModel()
 ) {
+    val uiState by quizViewModel.uiState.collectAsState()
+
+    if (uiState.quizFinished) {
+        QuizResultScreen(
+            score = uiState.score,
+            totalQuestions = uiState.questions.size,
+            onRestart = quizViewModel::restartQuiz,
+            onBack = onBack,
+            modifier = modifier
+        )
+        return
+    }
+
+    val currentQuestion =
+        uiState.questions[uiState.currentQuestionIndex]
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -36,20 +57,19 @@ fun QuizScreen(
             fontWeight = FontWeight.Bold
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         Text(
-            text = "Question 1 of 5",
-            style = MaterialTheme.typography.bodyMedium
+            text = "Question ${uiState.currentQuestionIndex + 1} of ${uiState.questions.size}"
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         Card(
             modifier = Modifier.fillMaxWidth()
         ) {
             Text(
-                text = "What does API stand for?",
+                text = currentQuestion.question,
                 modifier = Modifier.padding(20.dp),
                 style = MaterialTheme.typography.titleMedium
             )
@@ -57,43 +77,155 @@ fun QuizScreen(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        OutlinedButton(
-            onClick = { },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Application Programming Interface")
+        currentQuestion.answers.forEachIndexed { index, answer ->
+
+            OutlinedButton(
+                onClick = {
+                    quizViewModel.selectAnswer(index)
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                val selectedMark =
+                    if (uiState.selectedAnswerIndex == index) {
+                        "✓ "
+                    } else {
+                        ""
+                    }
+
+                Text(
+                    text = selectedMark + answer
+                )
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
+        if (!uiState.answerSubmitted) {
 
-        OutlinedButton(
-            onClick = { },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Android Program Internet")
+            Button(
+                onClick = {
+                    quizViewModel.submitAnswer()
+                },
+                enabled = uiState.selectedAnswerIndex != null,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Submit Answer")
+            }
+
+        } else {
+
+            val isCorrect =
+                uiState.selectedAnswerIndex ==
+                        currentQuestion.correctAnswerIndex
+
+            Text(
+                text = if (isCorrect) {
+                    "Correct ✓"
+                } else {
+                    "Incorrect"
+                },
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            if (!isCorrect) {
+                Text(
+                    text = "Correct answer: " +
+                            currentQuestion.answers[
+                                currentQuestion.correctAnswerIndex
+                            ]
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
+            Button(
+                onClick = {
+                    quizViewModel.nextQuestion()
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    if (
+                        uiState.currentQuestionIndex ==
+                        uiState.questions.lastIndex
+                    ) {
+                        "Finish Quiz"
+                    } else {
+                        "Next Question"
+                    }
+                )
+            }
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         OutlinedButton(
-            onClick = { },
+            onClick = onBack,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Application Process Input")
+            Text("Back to Home")
+        }
+    }
+}
+
+@Composable
+private fun QuizResultScreen(
+    score: Int,
+    totalQuestions: Int,
+    onRestart: () -> Unit,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val percentage =
+        if (totalQuestions > 0) {
+            score * 100 / totalQuestions
+        } else {
+            0
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = "Quiz Complete!",
+            style = MaterialTheme.typography.headlineLarge,
+            fontWeight = FontWeight.Bold
+        )
 
-        OutlinedButton(
-            onClick = { },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Android Programming Interface")
-        }
+        Spacer(modifier = Modifier.height(24.dp))
 
-        Spacer(modifier = Modifier.height(28.dp))
+        Text(
+            text = "Score: $score / $totalQuestions",
+            style = MaterialTheme.typography.headlineSmall
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = "$percentage%",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold
+        )
+
+        Spacer(modifier = Modifier.height(32.dp))
 
         Button(
+            onClick = onRestart,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Restart Quiz")
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        OutlinedButton(
             onClick = onBack,
             modifier = Modifier.fillMaxWidth()
         ) {

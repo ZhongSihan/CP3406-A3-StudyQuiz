@@ -1,0 +1,128 @@
+package com.sihan.studyquiz.viewmodel
+
+import androidx.lifecycle.ViewModel
+import com.sihan.studyquiz.model.QuizQuestion
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+
+data class QuizUiState(
+    val questions: List<QuizQuestion> = emptyList(),
+    val currentQuestionIndex: Int = 0,
+    val selectedAnswerIndex: Int? = null,
+    val score: Int = 0,
+    val answerSubmitted: Boolean = false,
+    val quizFinished: Boolean = false
+)
+
+class QuizViewModel : ViewModel() {
+
+    private val sampleQuestions = listOf(
+        QuizQuestion(
+            question = "What does API stand for?",
+            answers = listOf(
+                "Application Programming Interface",
+                "Android Program Internet",
+                "Application Process Input",
+                "Android Programming Interface"
+            ),
+            correctAnswerIndex = 0
+        ),
+        QuizQuestion(
+            question = "Which language is mainly used for modern Android development?",
+            answers = listOf(
+                "Python",
+                "Kotlin",
+                "PHP",
+                "Ruby"
+            ),
+            correctAnswerIndex = 1
+        ),
+        QuizQuestion(
+            question = "What is Jetpack Compose used for?",
+            answers = listOf(
+                "Database management",
+                "Building Android user interfaces",
+                "Creating web servers",
+                "Managing GitHub repositories"
+            ),
+            correctAnswerIndex = 1
+        ),
+        QuizQuestion(
+            question = "What does Room help an Android app do?",
+            answers = listOf(
+                "Store local data",
+                "Take photos",
+                "Send SMS messages",
+                "Change screen brightness"
+            ),
+            correctAnswerIndex = 0
+        ),
+        QuizQuestion(
+            question = "What is a ViewModel mainly used for?",
+            answers = listOf(
+                "Managing UI-related data",
+                "Drawing app icons",
+                "Installing Android Studio",
+                "Creating Git branches"
+            ),
+            correctAnswerIndex = 0
+        )
+    )
+
+    private val _uiState = MutableStateFlow(
+        QuizUiState(questions = sampleQuestions)
+    )
+
+    val uiState: StateFlow<QuizUiState> = _uiState.asStateFlow()
+
+    fun selectAnswer(index: Int) {
+        if (!_uiState.value.answerSubmitted) {
+            _uiState.value = _uiState.value.copy(
+                selectedAnswerIndex = index
+            )
+        }
+    }
+
+    fun submitAnswer() {
+        val state = _uiState.value
+        val selectedIndex = state.selectedAnswerIndex ?: return
+
+        val currentQuestion =
+            state.questions[state.currentQuestionIndex]
+
+        val newScore =
+            if (selectedIndex == currentQuestion.correctAnswerIndex) {
+                state.score + 1
+            } else {
+                state.score
+            }
+
+        _uiState.value = state.copy(
+            score = newScore,
+            answerSubmitted = true
+        )
+    }
+
+    fun nextQuestion() {
+        val state = _uiState.value
+
+        if (state.currentQuestionIndex < state.questions.lastIndex) {
+            _uiState.value = state.copy(
+                currentQuestionIndex = state.currentQuestionIndex + 1,
+                selectedAnswerIndex = null,
+                answerSubmitted = false
+            )
+        } else {
+            _uiState.value = state.copy(
+                quizFinished = true
+            )
+        }
+    }
+
+    fun restartQuiz() {
+        _uiState.value = QuizUiState(
+            questions = sampleQuestions
+        )
+    }
+}
