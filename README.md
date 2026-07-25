@@ -42,6 +42,28 @@ The application focuses on:
 
 ---
 
+## Screenshots
+
+### Landing Screen
+![Landing Screen](screenshots-landing.png)
+
+### Settings Screen
+![Settings Screen](screenshots-settings.png)
+
+### Quiz - Incorrect Answer
+![Quiz Incorrect Answer](screenshots-quiz-incorrect.png)
+
+### Quiz - Correct Answer
+![Quiz Correct Answer](screenshots-quiz-correct.png)
+
+### Quiz Complete
+![Quiz Complete](screenshots-quiz-complete.png)
+
+### Statistics Screen
+![Statistics Screen](screenshots-statistics.png)
+
+---
+
 ## Core Screens
 
 StudyQuiz contains four main screens.
