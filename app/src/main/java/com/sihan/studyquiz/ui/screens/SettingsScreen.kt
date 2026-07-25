@@ -1,6 +1,5 @@
 package com.sihan.studyquiz.ui.screens
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,29 +13,27 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.sihan.studyquiz.viewmodel.SettingsViewModel
 
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    settingsViewModel: SettingsViewModel = viewModel()
 ) {
-    var difficulty by remember { mutableStateOf("Easy") }
-    var soundEnabled by remember { mutableStateOf(true) }
-    var largeTextEnabled by remember { mutableStateOf(false) }
+    val uiState by settingsViewModel.uiState.collectAsState()
 
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(24.dp),
-        verticalArrangement = Arrangement.Center
+            .padding(24.dp)
     ) {
         Text(
             text = "Settings",
@@ -58,11 +55,37 @@ fun SettingsScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 RadioButton(
-                    selected = difficulty == option,
-                    onClick = { difficulty = option }
+                    selected = uiState.difficulty == option,
+                    onClick = {
+                        settingsViewModel.setDifficulty(option)
+                    }
                 )
 
-                Text(text = option)
+                Text(option)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Text(
+            text = "Number of Questions",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+
+        listOf(5, 10).forEach { count ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                RadioButton(
+                    selected = uiState.questionCount == count,
+                    onClick = {
+                        settingsViewModel.setQuestionCount(count)
+                    }
+                )
+
+                Text("$count questions")
             }
         }
 
@@ -78,8 +101,10 @@ fun SettingsScreen(
             )
 
             Switch(
-                checked = soundEnabled,
-                onCheckedChange = { soundEnabled = it }
+                checked = uiState.soundEnabled,
+                onCheckedChange = {
+                    settingsViewModel.setSoundEnabled(it)
+                }
             )
         }
 
@@ -95,8 +120,10 @@ fun SettingsScreen(
             )
 
             Switch(
-                checked = largeTextEnabled,
-                onCheckedChange = { largeTextEnabled = it }
+                checked = uiState.largeTextEnabled,
+                onCheckedChange = {
+                    settingsViewModel.setLargeTextEnabled(it)
+                }
             )
         }
 

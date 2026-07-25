@@ -28,6 +28,8 @@ import com.sihan.studyquiz.viewmodel.QuizViewModel
 
 @Composable
 fun QuizScreen(
+    difficulty: String,
+    questionCount: Int,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -37,8 +39,11 @@ fun QuizScreen(
         context.applicationContext as StudyQuizApplication
 
     val quizViewModel: QuizViewModel = viewModel(
+        key = "quiz_${difficulty}_$questionCount",
         factory = QuizViewModel.Factory(
-            application.container.quizResultDao
+            quizResultDao = application.container.quizResultDao,
+            difficulty = difficulty,
+            questionCount = questionCount
         )
     )
 

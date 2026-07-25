@@ -14,10 +14,14 @@ class QuizRepository {
         .create(QuizApiService::class.java)
 
     suspend fun getQuestions(
-        amount: Int = 5
+        amount: Int,
+        difficulty: String
     ): List<QuizQuestion> {
 
-        val response = api.getQuestions(amount)
+        val response = api.getQuestions(
+            amount = amount,
+            difficulty = difficulty.lowercase()
+        )
 
         return response.results.map { dto ->
 

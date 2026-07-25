@@ -24,7 +24,9 @@ data class QuizUiState(
 )
 
 class QuizViewModel(
-    private val quizResultDao: QuizResultDao
+    private val quizResultDao: QuizResultDao,
+    private val difficulty: String,
+    private val questionCount: Int
 ) : ViewModel() {
 
     private val repository = QuizRepository()
@@ -83,10 +85,11 @@ class QuizViewModel(
     )
 
     private val _uiState = MutableStateFlow(
-        QuizUiState(questions = fallbackQuestions)
+        QuizUiState()
     )
 
-    val uiState: StateFlow<QuizUiState> = _uiState.asStateFlow()
+    val uiState: StateFlow<QuizUiState> =
+        _uiState.asStateFlow()
 
     init {
         loadQuestions()
@@ -94,22 +97,40 @@ class QuizViewModel(
 
     fun loadQuestions() {
         viewModelScope.launch {
-            _uiState.value = QuizUiState(isLoading = true)
+
+            _uiState.value = QuizUiState(
+                isLoading = true
+            )
 
             try {
-                val questions = repository.getQuestions(5)
+                val questions = repository.getQuestions(
+                    amount = questionCount,
+                    difficulty = difficulty
+                )
 
                 _uiState.value = QuizUiState(
-                    questions = if (questions.isNotEmpty()) {
-                        questions
-                    } else {
-                        fallbackQuestions
-                    }
+                    questions =
+                        if (questions.isNotEmpty()) {
+                            questions
+                        } else {
+                            fallbackQuestions.take(
+                                questionCount.coerceAtMost(
+                                    fallbackQuestions.size
+                                )
+                            )
+                        }
                 )
+
             } catch (exception: Exception) {
+
                 _uiState.value = QuizUiState(
-                    questions = fallbackQuestions,
-                    errorMessage = "Online questions could not be loaded. Using offline questions."
+                    questions = fallbackQuestions.take(
+                        questionCount.coerceAtMost(
+                            fallbackQuestions.size
+                        )
+                    ),
+                    errorMessage =
+                        "Online questions could not be loaded. Using offline questions."
                 )
             }
         }
@@ -117,46 +138,67 @@ class QuizViewModel(
 
     fun selectAnswer(index: Int) {
         if (!_uiState.value.answerSubmitted) {
-            _uiState.value = _uiState.value.copy(
-                selectedAnswerIndex = index
-            )
+            _uiState.value =
+                _uiState.value.copy(
+                    selectedAnswerIndex = index
+                )
         }
     }
 
     fun submitAnswer() {
         val state = _uiState.value
-        val selectedIndex = state.selectedAnswerIndex ?: return
-        if (state.questions.isEmpty()) return
+
+        val selectedIndex =
+            state.selectedAnswerIndex ?: return
+
+        if (state.questions.isEmpty()) {
+            return
+        }
 
         val currentQuestion =
-            state.questions[state.currentQuestionIndex]
+            state.questions[
+                state.currentQuestionIndex
+            ]
 
         val newScore =
-            if (selectedIndex == currentQuestion.correctAnswerIndex) {
+            if (
+                selectedIndex ==
+                currentQuestion.correctAnswerIndex
+            ) {
                 state.score + 1
             } else {
                 state.score
             }
 
-        _uiState.value = state.copy(
-            score = newScore,
-            answerSubmitted = true
-        )
+        _uiState.value =
+            state.copy(
+                score = newScore,
+                answerSubmitted = true
+            )
     }
 
     fun nextQuestion() {
         val state = _uiState.value
 
-        if (state.currentQuestionIndex < state.questions.lastIndex) {
-            _uiState.value = state.copy(
-                currentQuestionIndex = state.currentQuestionIndex + 1,
-                selectedAnswerIndex = null,
-                answerSubmitted = false
-            )
+        if (
+            state.currentQuestionIndex <
+            state.questions.lastIndex
+        ) {
+
+            _uiState.value =
+                state.copy(
+                    currentQuestionIndex =
+                        state.currentQuestionIndex + 1,
+                    selectedAnswerIndex = null,
+                    answerSubmitted = false
+                )
+
         } else {
-            _uiState.value = state.copy(
-                quizFinished = true
-            )
+
+            _uiState.value =
+                state.copy(
+                    quizFinished = true
+                )
 
             saveResult()
         }
@@ -167,7 +209,8 @@ class QuizViewModel(
 
         val percentage =
             if (state.questions.isNotEmpty()) {
-                state.score * 100 / state.questions.size
+                state.score * 100 /
+                        state.questions.size
             } else {
                 0
             }
@@ -176,7 +219,8 @@ class QuizViewModel(
             quizResultDao.insertResult(
                 QuizResultEntity(
                     score = state.score,
-                    totalQuestions = state.questions.size,
+                    totalQuestions =
+                        state.questions.size,
                     percentage = percentage
                 )
             )
@@ -188,14 +232,20 @@ class QuizViewModel(
     }
 
     class Factory(
-        private val quizResultDao: QuizResultDao
+        private val quizResultDao: QuizResultDao,
+        private val difficulty: String,
+        private val questionCount: Int
     ) : ViewModelProvider.Factory {
 
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(
             modelClass: Class<T>
         ): T {
-            return QuizViewModel(quizResultDao) as T
+            return QuizViewModel(
+                quizResultDao = quizResultDao,
+                difficulty = difficulty,
+                questionCount = questionCount
+            ) as T
         }
     }
 }
