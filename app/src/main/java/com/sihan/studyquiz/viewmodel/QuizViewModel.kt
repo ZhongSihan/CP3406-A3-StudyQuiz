@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import com.sihan.studyquiz.util.QuizCalculator
 
 data class QuizUiState(
     val questions: List<QuizQuestion> = emptyList(),
@@ -205,22 +206,18 @@ class QuizViewModel(
     }
 
     private fun saveResult() {
-        val state = _uiState.value
+        val currentState = _uiState.value
 
-        val percentage =
-            if (state.questions.isNotEmpty()) {
-                state.score * 100 /
-                        state.questions.size
-            } else {
-                0
-            }
+        val percentage = QuizCalculator.calculatePercentage(
+            score = currentState.score,
+            totalQuestions = currentState.questions.size
+        )
 
         viewModelScope.launch {
             quizResultDao.insertResult(
                 QuizResultEntity(
-                    score = state.score,
-                    totalQuestions =
-                        state.questions.size,
+                    score = currentState.score,
+                    totalQuestions = currentState.questions.size,
                     percentage = percentage
                 )
             )

@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-
+import com.sihan.studyquiz.util.QuizCalculator
 data class StatisticsUiState(
     val totalAttempts: Int = 0,
     val highestScore: Int = 0,
@@ -36,14 +36,13 @@ class StatisticsViewModel(
                 val totalAttempts = results.size
 
                 val highestScore =
-                    results.maxOfOrNull { it.percentage } ?: 0
-
+                    QuizCalculator.calculateHighest(
+                        results.map { it.percentage }
+                    )
                 val averageScore =
-                    if (results.isNotEmpty()) {
-                        results.map { it.percentage }.average().toInt()
-                    } else {
-                        0
-                    }
+                    QuizCalculator.calculateAverage(
+                        results.map { it.percentage }
+                    )
 
                 val latestScore =
                     results.firstOrNull()?.percentage ?: 0
